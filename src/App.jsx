@@ -4,6 +4,7 @@ import CameraPanel from './components/CameraPanel.jsx'
 import './App.css'
 
 const API_BASE = 'https://prod-ut.ibi511.com'
+const API_CCTV = '/api/cctv'
 const PAGE_SIZE = 200
 
 async function fetchCameraPage(start) {
@@ -13,7 +14,7 @@ async function fetchCameraPage(start) {
     'order[i]': '1',
     'order[dir]': 'asc',
   })
-  const res = await fetch(`${API_BASE}/cctv?${params}`, {
+  const res = await fetch(`${API_CCTV}?${params}`, {
     headers: { Accept: 'application/json' },
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
