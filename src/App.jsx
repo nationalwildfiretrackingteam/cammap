@@ -3,49 +3,55 @@ import CameraMap from './components/CameraMap.jsx'
 import CameraPanel from './components/CameraPanel.jsx'
 import './App.css'
 
-// Socrata public open data API — no key needed, CORS enabled, fetch direct from browser.
-// Dataset: Utah Open Data "UDOT Traffic Cameras"
-const SOCRATA_URL = 'https://opendata.utah.gov/resource/i3u7-ydfp.json'
+// Public ArcGIS MapServer (Jordan City GIS, layer 5 = UDOT Traffic Cameras).
+// ArcGIS services carry CORS headers; no API key required.
+const ARCGIS_URL =
+  'https://gis.wjordan.com/arcgis/rest/services/CityInfo/MapServer/5/query' +
+  '?where=1%3D1&outFields=*&outSR=4326&f=json'
 
 async function fetchCameras() {
-  const res = await fetch(`${SOCRATA_URL}?$limit=50000`, {
-    headers: { Accept: 'application/json' },
-  })
+  const res = await fetch(ARCGIS_URL, { headers: { Accept: 'application/json' } })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const text = await res.text()
+  let data
   try {
-    return JSON.parse(text)
+    data = JSON.parse(text)
   } catch {
     throw new Error(`Unexpected response: ${text.slice(0, 120)}`)
   }
-}
-
-function extractLatLng(raw) {
-  // Socrata location type: { latitude, longitude } or GeoJSON { coordinates: [lng, lat] }
-  const loc = raw.location ?? raw.geocoded_column ?? {}
-  const lat = parseFloat(
-    raw.latitude ?? raw.lat ?? loc.latitude ?? loc.coordinates?.[1] ?? 0
-  )
-  const lng = parseFloat(
-    raw.longitude ?? raw.long ?? raw.lng ??
-    loc.longitude ?? loc.coordinates?.[0] ?? 0
-  )
-  return { lat, lng }
+  if (data.error) throw new Error(`ArcGIS error: ${data.error.message}`)
+  return data
 }
 
 function normalizeCamera(raw) {
-  const { lat, lng } = extractLatLng(raw)
-  const id = raw.camera_id ?? raw.id ?? String(Math.random())
+  // ArcGIS FeatureSet: each feature has .attributes (field map) and .geometry {x,y} in WGS84
+  const attr = raw.attributes ?? raw
+  const geo = raw.geometry ?? {}
+
+  // Geometry is already in WGS84 (outSR=4326): x=lng, y=lat
+  const lat = geo.y ?? parseFloat(attr.LATITUDE ?? attr.latitude ?? attr.LAT ?? 0)
+  const lng = geo.x ?? parseFloat(attr.LONGITUDE ?? attr.longitude ?? attr.LNG ?? 0)
+
+  // Pick the most descriptive string field for name and URL — field names vary by server
+  const id = String(attr.OBJECTID ?? attr.objectid ?? attr.ID ?? attr.id ?? Math.random())
+  const name =
+    attr.CAMERA_NAME ?? attr.NAME ?? attr.LOCATION ?? attr.LABEL ?? attr.name ?? 'Camera'
+  const imageUrl =
+    attr.IMAGE_URL ?? attr.CAMERA_URL ?? attr.URL ?? attr.image_url ?? attr.url ?? ''
+  const detailUrl =
+    attr.URL ?? attr.DETAIL_URL ?? attr.CAMERA_URL ??
+    `https://udottraffic.utah.gov/tooltip/Cameras/${id}`
+
   return {
-    id: String(id),
-    name: raw.location_name ?? raw.camera_name ?? raw.name ?? raw.title ?? 'Unknown',
-    roadway: raw.route ?? raw.roadway ?? raw.road ?? '',
-    direction: raw.direction ?? raw.dir ?? '',
+    id,
+    name,
+    roadway: attr.ROADWAY ?? attr.ROAD ?? attr.roadway ?? attr.road ?? '',
+    direction: attr.DIRECTION ?? attr.direction ?? '',
     lat,
     lng,
-    imageUrl: raw.image_url ?? raw.imageurl ?? raw.snapshot_url ?? raw.url ?? '',
-    detailUrl: raw.url ?? raw.camera_url ?? `https://udottraffic.utah.gov/tooltip/Cameras/${id}`,
-    active: raw.status !== 'Inactive' && raw.active !== false,
+    imageUrl,
+    detailUrl,
+    active: attr.STATUS !== 'Inactive' && attr.STATUS !== 0,
   }
 }
 
@@ -61,7 +67,8 @@ export default function App() {
     setError(null)
     try {
       const data = await fetchCameras()
-      const items = Array.isArray(data) ? data : (data.data ?? data.cameras ?? [])
+      // ArcGIS FeatureSet shape: { features: [{attributes, geometry}] }
+      const items = data.features ?? (Array.isArray(data) ? data : [])
       const normalized = items
         .map(normalizeCamera)
         .filter((c) => isFinite(c.lat) && isFinite(c.lng) && (c.lat !== 0 || c.lng !== 0))
