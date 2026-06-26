@@ -8,6 +8,10 @@ export default function CameraPanel({ camera, onClose }) {
 
   useEffect(() => {
     setImgError(false)
+    if (!camera.imageUrl) {
+      setImgSrc(null)
+      return
+    }
     // Bust cache on camera change or manual refresh
     const url = new URL(camera.imageUrl, window.location.origin)
     url.searchParams.set('_t', String(Date.now()))

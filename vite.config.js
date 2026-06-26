@@ -4,12 +4,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api/cctv': {
-        target: 'https://prod-ut.ibi511.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/cctv/, '/cctv'),
-      },
-    },
+    // No proxy needed — camera data fetched directly from Socrata (CORS-enabled public API)
   },
 })
