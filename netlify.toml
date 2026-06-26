@@ -1,6 +1,6 @@
 [[redirects]]
-  from = "/api/cctv"
-  to = "https://prod-ut.ibi511.com/cctv"
+  from = "/api/cameras"
+  to = "https://www.udottraffic.utah.gov/api/v2/get/cameras"
   status = 200
   force = true
 

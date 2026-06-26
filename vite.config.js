@@ -5,10 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/cctv': {
-        target: 'https://prod-ut.ibi511.com',
+      '/api/cameras': {
+        target: 'https://www.udottraffic.utah.gov',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/cctv/, '/cctv'),
+        rewrite: () => '/api/v2/get/cameras',
       },
     },
   },

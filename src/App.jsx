@@ -3,15 +3,11 @@ import CameraMap from './components/CameraMap.jsx'
 import CameraPanel from './components/CameraPanel.jsx'
 import './App.css'
 
-const API_BASE = 'https://prod-ut.ibi511.com'
-const API_CCTV = '/api/cctv'
-const PAGE_SIZE = 200
+// Proxied in dev (vite.config.js) and production (netlify.toml).
+const API_CAMERAS = '/api/cameras'
 
-async function fetchCameraPage(start) {
-  // Build query string manually — URLSearchParams with bracket keys throws
-  // "The string did not match the expected pattern." on Safari/WebKit.
-  const url = `${API_CCTV}?start=${start}&length=${PAGE_SIZE}`
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+async function fetchCameras() {
+  const res = await fetch(API_CAMERAS, { headers: { Accept: 'application/json' } })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const text = await res.text()
   try {
@@ -22,21 +18,18 @@ async function fetchCameraPage(start) {
 }
 
 function normalizeCamera(raw) {
+  // UDOT API shape: { Id, Location, Roadway, Direction, Latitude, Longitude, Views: [{Url}] }
+  const view = Array.isArray(raw.Views) && raw.Views.length > 0 ? raw.Views[0] : null
   return {
-    id: raw.id ?? raw.cctv_id ?? raw.cctvId ?? String(Math.random()),
-    name: raw.name ?? raw.cctv_label ?? raw.label ?? raw.title ?? 'Unknown',
-    roadway: raw.roadway ?? raw.road ?? raw.highway ?? '',
-    direction: raw.direction ?? raw.dir ?? '',
-    lat: parseFloat(raw.latitude ?? raw.lat ?? 0),
-    lng: parseFloat(raw.longitude ?? raw.lon ?? raw.lng ?? 0),
-    imageUrl:
-      raw.image_url ??
-      raw.imageUrl ??
-      raw.snapshot_url ??
-      raw.url ??
-      `${API_BASE}/cctv/${raw.id ?? raw.cctv_id}/image`,
-    detailUrl: raw.url ?? null,
-    active: raw.active !== false && raw.status !== 'inactive',
+    id: String(raw.Id ?? raw.id ?? Math.random()),
+    name: raw.Location ?? raw.name ?? raw.label ?? 'Unknown',
+    roadway: raw.Roadway ?? raw.roadway ?? '',
+    direction: raw.Direction ?? raw.direction ?? '',
+    lat: parseFloat(raw.Latitude ?? raw.latitude ?? 0),
+    lng: parseFloat(raw.Longitude ?? raw.longitude ?? 0),
+    imageUrl: view?.Url ?? raw.image_url ?? raw.imageUrl ?? raw.snapshot_url ?? '',
+    detailUrl: view?.Url ?? raw.url ?? null,
+    active: raw.Status !== 'inactive' && raw.active !== false,
   }
 }
 
@@ -51,27 +44,9 @@ export default function App() {
     setLoading(true)
     setError(null)
     try {
-      const first = await fetchCameraPage(0)
-      // API may return a plain array or a DataTables-style {data, recordsTotal} object.
-      const firstItems = Array.isArray(first) ? first : (first.data ?? [])
-      const total = Array.isArray(first)
-        ? first.length
-        : (first.recordsTotal ?? first.iTotalRecords ?? firstItems.length)
-      let all = [...firstItems]
-
-      const remaining = total - PAGE_SIZE
-      if (remaining > 0) {
-        const pages = Math.ceil(remaining / PAGE_SIZE)
-        const fetches = Array.from({ length: pages }, (_, i) =>
-          fetchCameraPage((i + 1) * PAGE_SIZE)
-        )
-        const results = await Promise.all(fetches)
-        for (const r of results) {
-          all = all.concat(Array.isArray(r) ? r : (r.data ?? []))
-        }
-      }
-
-      const normalized = all
+      const data = await fetchCameras()
+      const items = Array.isArray(data) ? data : (data.data ?? data.cameras ?? [])
+      const normalized = items
         .map(normalizeCamera)
         .filter((c) => isFinite(c.lat) && isFinite(c.lng) && (c.lat !== 0 || c.lng !== 0))
       setCameras(normalized)
