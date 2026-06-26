@@ -3,11 +3,14 @@ import CameraMap from './components/CameraMap.jsx'
 import CameraPanel from './components/CameraPanel.jsx'
 import './App.css'
 
-// Proxied in dev (vite.config.js) and production (netlify.toml).
-const API_CAMERAS = '/api/cameras'
+// Socrata public open data API — no key needed, CORS enabled, fetch direct from browser.
+// Dataset: Utah Open Data "UDOT Traffic Cameras"
+const SOCRATA_URL = 'https://opendata.utah.gov/resource/i3u7-ydfp.json'
 
 async function fetchCameras() {
-  const res = await fetch(API_CAMERAS, { headers: { Accept: 'application/json' } })
+  const res = await fetch(`${SOCRATA_URL}?$limit=50000`, {
+    headers: { Accept: 'application/json' },
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const text = await res.text()
   try {
@@ -17,19 +20,32 @@ async function fetchCameras() {
   }
 }
 
+function extractLatLng(raw) {
+  // Socrata location type: { latitude, longitude } or GeoJSON { coordinates: [lng, lat] }
+  const loc = raw.location ?? raw.geocoded_column ?? {}
+  const lat = parseFloat(
+    raw.latitude ?? raw.lat ?? loc.latitude ?? loc.coordinates?.[1] ?? 0
+  )
+  const lng = parseFloat(
+    raw.longitude ?? raw.long ?? raw.lng ??
+    loc.longitude ?? loc.coordinates?.[0] ?? 0
+  )
+  return { lat, lng }
+}
+
 function normalizeCamera(raw) {
-  // UDOT API shape: { Id, Location, Roadway, Direction, Latitude, Longitude, Views: [{Url}] }
-  const view = Array.isArray(raw.Views) && raw.Views.length > 0 ? raw.Views[0] : null
+  const { lat, lng } = extractLatLng(raw)
+  const id = raw.camera_id ?? raw.id ?? String(Math.random())
   return {
-    id: String(raw.Id ?? raw.id ?? Math.random()),
-    name: raw.Location ?? raw.name ?? raw.label ?? 'Unknown',
-    roadway: raw.Roadway ?? raw.roadway ?? '',
-    direction: raw.Direction ?? raw.direction ?? '',
-    lat: parseFloat(raw.Latitude ?? raw.latitude ?? 0),
-    lng: parseFloat(raw.Longitude ?? raw.longitude ?? 0),
-    imageUrl: view?.Url ?? raw.image_url ?? raw.imageUrl ?? raw.snapshot_url ?? '',
-    detailUrl: view?.Url ?? raw.url ?? null,
-    active: raw.Status !== 'inactive' && raw.active !== false,
+    id: String(id),
+    name: raw.location_name ?? raw.camera_name ?? raw.name ?? raw.title ?? 'Unknown',
+    roadway: raw.route ?? raw.roadway ?? raw.road ?? '',
+    direction: raw.direction ?? raw.dir ?? '',
+    lat,
+    lng,
+    imageUrl: raw.image_url ?? raw.imageurl ?? raw.snapshot_url ?? raw.url ?? '',
+    detailUrl: raw.url ?? raw.camera_url ?? `https://udottraffic.utah.gov/tooltip/Cameras/${id}`,
+    active: raw.status !== 'Inactive' && raw.active !== false,
   }
 }
 
