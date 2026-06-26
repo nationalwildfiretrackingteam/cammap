@@ -1,0 +1,137 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  background: #1a1d2e;
+  border-bottom: 1px solid #2d3148;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon {
+  font-size: 1.2rem;
+}
+
+.app-header h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.camera-count {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #1e2336;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid #2d3148;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  background: #1e2336;
+  border: 1px solid #2d3148;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  width: 240px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus {
+  border-color: #4f7dba;
+}
+.search-input::placeholder {
+  color: #475569;
+}
+
+.refresh-btn {
+  background: #1e2336;
+  border: 1px solid #2d3148;
+  border-radius: 6px;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.refresh-btn:hover {
+  background: #2d3148;
+  color: #e2e8f0;
+}
+
+.app-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(15, 17, 23, 0.85);
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.overlay.error {
+  color: #f87171;
+}
+.overlay.error button {
+  margin-top: 8px;
+  padding: 8px 20px;
+  background: #1e2336;
+  border: 1px solid #f87171;
+  border-radius: 6px;
+  color: #f87171;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.overlay.error button:hover {
+  background: #2d1f2a;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #2d3148;
+  border-top-color: #4f7dba;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

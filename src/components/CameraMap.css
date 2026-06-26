@@ -1,0 +1,65 @@
+.cam-marker {
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  transition: transform 0.15s;
+}
+.cam-marker.active {
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border-color: rgba(255,255,255,0.8);
+}
+.cam-marker.inactive {
+  width: 10px;
+  height: 10px;
+  background: #475569;
+  border-color: rgba(255,255,255,0.3);
+}
+.cam-marker.selected {
+  width: 16px;
+  height: 16px;
+  background: #f59e0b;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.4), 0 0 8px rgba(0,0,0,0.5);
+}
+
+.cam-popup .leaflet-popup-content-wrapper {
+  background: #1a1d2e;
+  color: #e2e8f0;
+  border: 1px solid #2d3148;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.cam-popup .leaflet-popup-tip {
+  background: #1a1d2e;
+}
+.popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+.popup-content strong {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+.popup-content span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.popup-view-btn {
+  margin-top: 6px;
+  padding: 5px 10px;
+  background: #1e3a5f;
+  border: 1px solid #3b82f6;
+  border-radius: 5px;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+.popup-view-btn:hover {
+  background: #2d4a6f;
+}
