@@ -8,17 +8,17 @@ const API_CCTV = '/api/cctv'
 const PAGE_SIZE = 200
 
 async function fetchCameraPage(start) {
-  const params = new URLSearchParams({
-    start: String(start),
-    length: String(PAGE_SIZE),
-    'order[i]': '1',
-    'order[dir]': 'asc',
-  })
-  const res = await fetch(`${API_CCTV}?${params}`, {
-    headers: { Accept: 'application/json' },
-  })
+  // Build query string manually — URLSearchParams with bracket keys throws
+  // "The string did not match the expected pattern." on Safari/WebKit.
+  const url = `${API_CCTV}?start=${start}&length=${PAGE_SIZE}`
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Unexpected response: ${text.slice(0, 120)}`)
+  }
 }
 
 function normalizeCamera(raw) {
@@ -52,8 +52,12 @@ export default function App() {
     setError(null)
     try {
       const first = await fetchCameraPage(0)
-      const total = first.recordsTotal ?? first.iTotalRecords ?? first.data?.length ?? 0
-      let all = [...(first.data ?? [])]
+      // API may return a plain array or a DataTables-style {data, recordsTotal} object.
+      const firstItems = Array.isArray(first) ? first : (first.data ?? [])
+      const total = Array.isArray(first)
+        ? first.length
+        : (first.recordsTotal ?? first.iTotalRecords ?? firstItems.length)
+      let all = [...firstItems]
 
       const remaining = total - PAGE_SIZE
       if (remaining > 0) {
@@ -62,12 +66,14 @@ export default function App() {
           fetchCameraPage((i + 1) * PAGE_SIZE)
         )
         const results = await Promise.all(fetches)
-        for (const r of results) all = all.concat(r.data ?? [])
+        for (const r of results) {
+          all = all.concat(Array.isArray(r) ? r : (r.data ?? []))
+        }
       }
 
       const normalized = all
         .map(normalizeCamera)
-        .filter((c) => c.lat !== 0 && c.lng !== 0)
+        .filter((c) => isFinite(c.lat) && isFinite(c.lng) && (c.lat !== 0 || c.lng !== 0))
       setCameras(normalized)
     } catch (err) {
       setError(err.message)
